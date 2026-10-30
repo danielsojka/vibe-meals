@@ -13,12 +13,21 @@ Flexible recipe, meal planning, and shopping list web app.
 - **Shopping list** — preview all ingredients for chosen recipes (or the whole week's plan), check off what you already have (pantry auto-checked), then generate the list
 
 ## Run
+
+### Docker (recommended)
 ```bash
-pip install fastapi uvicorn
+docker compose up --build
+```
+Then open http://localhost:8000. Example data is seeded automatically on first start; the SQLite database is kept in a named volume (`mealplanner_data`) so it persists across restarts.
+
+### Without Docker
+Requires Python 3.10+ (`python3` on most systems):
+```bash
+pip install -r requirements.txt
 python seed.py            # optional: example data (burrito, pico de gallo, variants, brands)
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
-Then open http://127.0.0.1:8000 (or your host/port).
+Then open http://127.0.0.1:8000.
 
 ## Deploy
 Single process, SQLite file storage — runs on any small host (Railway, Render, Fly.io, a VPS) behind uvicorn/gunicorn. Set `MEALPLANNER_DB` to a persistent path.
@@ -27,3 +36,6 @@ Single process, SQLite file storage — runs on any small host (Railway, Render,
 - `app.py` — FastAPI backend (API + serves the frontend), SQLite schema
 - `static/index.html` — single-page frontend (vanilla JS, no build step)
 - `seed.py` — example data
+
+## Notes
+- The database file (`mealplanner.db`) is gitignored; run `python seed.py` to create example data.
