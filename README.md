@@ -27,3 +27,6 @@ Single process, SQLite file storage — runs on any small host (Railway, Render,
 - `app.py` — FastAPI backend (API + serves the frontend), SQLite schema
 - `static/index.html` — single-page frontend (vanilla JS, no build step)
 - `seed.py` — example data
+
+## Notes
+- The database file (`mealplanner.db`) is gitignored; run `python seed.py` to create example data.
