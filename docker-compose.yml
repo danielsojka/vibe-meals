@@ -1,0 +1,11 @@
+services:
+  mealplanner:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - mealplanner_data:/data
+    restart: unless-stopped
+
+volumes:
+  mealplanner_data:
