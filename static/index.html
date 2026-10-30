@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner</title>
+<style>
+:root {
+  --bg: #faf9f7; --card: #fff; --border: #e5e2dc; --text: #2b2a27;
+  --muted: #8a857c; --accent: #e07a3f; --accent-soft: #fbeee4; --green: #5a8a5a;
+  --tag-veg: #e8f3e8; --tag-veg-text: #3d6b3d; --tag-omni: #fdeedd; --tag-omni-text: #a05a1e;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+header { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+header h1 { font-size: 18px; margin: 0; color: var(--accent); }
+nav { display: flex; gap: 4px; }
+nav button { border: none; background: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted); }
+nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+main { max-width: 1000px; margin: 0 auto; padding: 20px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+h3 { font-size: 15px; margin: 0 0 8px; }
+input[type=text], input[type=number], textarea, select {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px;
+  font-family: inherit; background: var(--card); color: var(--text); width: 100%;
+}
+textarea { resize: vertical; }
+label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.row > div { flex: 1; min-width: 120px; }
+button.btn { background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 14px; cursor: pointer; }
+button.btn:hover { filter: brightness(1.05); }
+button.btn.ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+button.btn.danger { background: #c0504d; }
+button.btn.small { padding: 4px 10px; font-size: 12px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+.tag.vegetarian { background: var(--tag-veg); color: var(--tag-veg-text); }
+.tag.omnivorous { background: var(--tag-omni); color: var(--tag-omni-text); }
+.tag.sub { background: #eef0f7; color: #4a5378; }
+.tag.meal { background: #f2f0ec; color: var(--muted); }
+.tag.variant { background: #f7e8f0; color: #9a4d78; }
+.item-line { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+.item-line:last-child { border-bottom: none; }
+.item-name { flex: 1; }
+.muted { color: var(--muted); font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.recipe-card { cursor: pointer; transition: box-shadow .15s; }
+.recipe-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.recipe-card h3 { margin: 0 0 6px; font-size: 15px; }
+.searchbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.searchbar > div { flex: 1; min-width: 140px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+.planner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.day-card h3 { font-size: 13px; color: var(--muted); }
+.slot { margin: 6px 0; }
+.slot .slot-label { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 6px 0 2px; }
+.planned { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft);
+  color: var(--accent); padding: 3px 8px; border-radius: 6px; font-size: 12px; margin: 2px 4px 2px 0; }
+.planned .x { cursor: pointer; font-weight: bold; }
+.empty-slot { display: inline-block; border: 1px dashed var(--border); color: var(--muted);
+  font-size: 12px; padding: 3px 8px; border-radius: 6px; cursor: pointer; margin: 2px 4px 2px 0; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex;
+  align-items: flex-start; justify-content: center; padding: 30px; z-index: 50; overflow-y: auto; }
+.modal { background: var(--card); border-radius: 12px; padding: 20px; width: 100%; max-width: 640px; }
+.modal h2 { display: flex; justify-content: space-between; align-items: center; }
+.brand-chip { display: inline-block; background: #f2f0ec; border-radius: 6px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 12px; }
+.checkbox-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.checkbox-line input { width: auto; }
+.hidden { display: none !important; }
+.back { color: var(--accent); cursor: pointer; font-size: 13px; margin-bottom: 10px; display: inline-block; }
+.section { margin-top: 16px; }
+.steps { white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🥘 Meal Planner</h1>
+  <nav>
+    <button data-view="recipes" class="active">Recipes</button>
+    <button data-view="ingredients">Ingredients &amp; Brands</button>
+    <button data-view="planner">Meal Planner</button>
+    <button data-view="shopping">Shopping List</button>
+  </nav>
+</header>
+<main id="app"></main>
+
+<script>
+const API = '/api';
+const state = { view: 'recipes', recipeDetail: null };
+const $ = sel => document.querySelector(sel);
+const app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: {'Content-Type': 'application/json'},
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({detail: res.statusText}));
+    throw new Error(err.detail || 'error');
+  }
+  return res.json();
+}
+
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  state.recipeDetail = null;
+  setView(b.dataset.view);
+}));
+function setView(view) {
+  state.view = view;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  render();
+}
+function dietTag(diet) { return `<span class="tag ${diet}">${diet}</span>`; }
+function mealTags(meals) { return (meals||[]).map(m => `<span class="tag meal">${m}</span>`).join(''); }
+
+// ============ RECIPES VIEW ============
+async function renderRecipes(params = {}) {
+  const qs = new URLSearchParams(Object.entries(params).filter(([,v]) => v)).toString();
+  const recipes = await api('/recipes' + (qs ? '?' + qs : ''));
+  app.innerHTML = `
+    <div class="searchbar card">
+      <div><label>Search name</label><input type="text" id="f-q" value="${esc(params.q||'')}" placeholder="e.g. burrito"></div>
+      <div><label>Meal</label>
+        <select id="f-meal"><option value="">any</option>
+          ${['breakfast','lunch','dinner','snack'].map(m => `<option ${params.meal===m?'selected':''}>${m}</option>`).join('')}
+        </select></div>
+      <div><label>Diet</label>
+        <select id="f-diet"><option value="">any</option><option ${params.diet==='omnivorous'?'selected':''}>omnivorous</option><option ${params.diet==='vegetarian'?'selected':''}>vegetarian</option></select></div>
+      <div><label>Contains ingredient</label><input type="text" id="f-ing" value="${esc(params.ingredient||'')}" placeholder="e.g. pepper (searches sub-recipes too)"></div>
+      <div><label>Type</label>
+        <select id="f-kind"><option value="">all</option><option value="normal" ${params.kind==='normal'?'selected':''}>dishes</option><option value="sub" ${params.kind==='sub'?'selected':''}>sub-recipes</option><option value="template" ${params.kind==='template'?'selected':''}>meal templates</option></select></div>
+      <div style="flex:0"><button class="btn" id="f-go">Search</button></div>
+      <div style="flex:0"><button class="btn ghost" id="new-recipe">+ New Recipe</button></div>
+    </div>
+    <div class="grid">${recipes.map(r => `
+      <div class="card recipe-card" data-id="${r.id}">
+        <h3>${esc(r.name)}</h3>
+        <div>${dietTag(r.diet)}${r.is_subrecipe ? '<span class="tag sub">sub-recipe</span>' : ''}${r.is_meal_template ? '<span class="tag sub">meal template</span>' : ''}${r.variant_label ? `<span class="tag variant">${esc(r.variant_label)}</span>` : ''}</div>
+        <div class="muted" style="margin-top:6px">${mealTags(r.meals) || '&nbsp;'}</div>
+        <div class="muted" style="margin-top:6px">${r.items.length} item(s)</div>
+      </div>`).join('') || '<p class="muted">No recipes found.</p>'}
+    </div>`;
+  $('#f-go').onclick = () => renderRecipes({q: $('#f-q').value, meal: $('#f-meal').value, diet: $('#f-diet').value, ingredient: $('#f-ing').value, kind: $('#f-kind').value});
+  $('#f-q').addEventListener('keydown', e => { if (e.key === 'Enter') $('#f-go').click(); });
+  $('#f-ing').addEventListener('keydown', e => { if (e.key === 'Enter') $('#f-go').click(); });
+  $('#new-recipe').onclick = () => openRecipeEditor(null);
+  document.querySelectorAll('.recipe-card').forEach(c => c.onclick = () => renderRecipeDetail(+c.dataset.id));
+}
+
+// ============ RECIPE DETAIL ============
+async function renderRecipeDetail(id) {
+  const r = await api('/recipes/' + id);
+  state.recipeDetail = id;
+  const expanded = await api('/recipes/' + id + '/ingredients');
+  const variants = (await api('/recipes')).filter(x => x.base_recipe_id === r.id || (x.id === r.base_recipe_id));
+  app.innerHTML = `
+    <span class="back" id="back">← Back to recipes</span>
+    <div class="card">
+      <h2>${esc(r.name)} ${dietTag(r.diet)}
+        ${r.is_subrecipe ? '<span class="tag sub">sub-recipe</span>' : ''}
+        ${r.is_meal_template ? '<span class="tag sub">meal template</span>' : ''}
+        ${r.variant_label ? `<span class="tag variant">${esc(r.variant_label)}</span>` : ''}
+        <span style="float:right">
+          <button class="btn ghost small" id="edit">Edit</button>
+          <button class="btn ghost small" id="plan">Plan</button>
+          <button class="btn ghost small" id="shop">Add to Shopping</button>
+          ${r.diet !== 'vegetarian' ? '<button class="btn ghost small" id="variant">+ Vegetarian Variant</button>' : ''}
+          <button class="btn danger small" id="del">Delete</button>
+        </span>
+      </h2>
+      ${r.description ? `<p class="muted">${esc(r.description)}</p>` : ''}
+      <p class="muted">Meals: ${mealTags(r.meals) || '—'} &nbsp;·&nbsp; Serves ${r.servings}</p>
+      ${variants.length ? `<p>Related variants: ${variants.map(v => `<a href="#" class="variant-link" data-id="${v.id}">${esc(v.name)} (${esc(v.variant_label || v.diet)})</a>`).join(', ')}</p>` : ''}
+      <div class="section"><h3>Items</h3>
+        ${r.items.map(it => `
+          <div class="item-line">
+            <span class="item-name">${it.kind === 'recipe' ? '🥣 ' : ''}${esc(it.name)}
+              ${it.slot ? `<span class="tag meal">${esc(it.slot)}</span>` : ''}
+              ${it.kind === 'recipe' ? `<span class="tag sub">sub-recipe</span>` : ''}
+              ${it.optional ? '<span class="tag meal">optional</span>' : ''}
+            </span>
+            <span class="muted">${esc(it.quantity)}</span>
+            ${it.brands && it.brands.length ? `<span>${it.brands.map(b => `<span class="brand-chip" title="${esc(b.note)}">🏷 ${esc(b.name)}</span>`).join('')}</span>` : ''}
+          </div>
+          ${it.kind === 'recipe' ? '' : ''}`).join('') || '<p class="muted">No items.</p>'}
+      </div>
+      ${r.instructions ? `<div class="section"><h3>Instructions</h3><div class="steps">${esc(r.instructions)}</div></div>` : ''}
+      <div class="section"><h3>Full ingredient list (through sub-recipes)</h3>
+        ${expanded.map(i => `<div class="item-line"><span class="item-name">${esc(i.name)} ${i.optional ? '<span class="tag meal">optional</span>' : ''}</span><span class="muted">${esc(i.quantity)}</span></div>`).join('') || '<p class="muted">—</p>'}
+      </div>
+    </div>`;
+  $('#back').onclick = () => { state.recipeDetail = null; renderRecipes(); };
+  $('#edit').onclick = () => openRecipeEditor(r);
+  $('#del').onclick = async () => { if (!confirm('Delete recipe?')) return; await api('/recipes/' + r.id, {method: 'DELETE'}); renderRecipes(); };
+  $('#plan').onclick = () => openPlanModal(r.id);
+  $('#shop').onclick = () => openShoppingPreview([r.id]);
+  $('#variant').onclick = () => openRecipeEditor(null, {base_recipe_id: r.id, diet: 'vegetarian', name: r.name, variant_label: 'Vegetarian variant', description: r.description, meals: r.meals, instructions: r.instructions});
+  document.querySelectorAll('.variant-link').forEach(a => a.onclick = e => { e.preventDefault(); renderRecipeDetail(+a.dataset.id); });
+}
+
+// ============ RECIPE EDITOR ============
+async function openRecipeEditor(recipe, preset = {}) {
+  const isNew = !recipe;
+  const [ingredients, recipes] = await Promise.all([api('/ingredients'), api('/recipes')]);
+  let data = recipe ? {...recipe, items: recipe.items.map(i => ({...i}))} : {name: '', description: '', diet: 'omnivorous', is_subrecipe: false, is_meal_template: false, base_recipe_id: preset.base_recipe_id || null, variant_label: preset.variant_label || '', servings: 2, instructions: preset.instructions || '', meals: preset.meals || [], items: [], isPreset: true, ...preset};
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  document.body.appendChild(backdrop);
+
+  function render() {
+    backdrop.innerHTML = `<div class="modal">
+      <h2>${isNew ? (recipe && recipe.id ? 'Edit' : 'New') : 'Edit'} Recipe ${data.base_recipe_id ? '<span class="tag variant">variant of recipe #' + data.base_recipe_id + '</span>' : ''}<button class="btn ghost small" id="close">✕</button></h2>
+      <div class="row">
+        <div><label>Name</label><input type="text" id="r-name" value="${esc(data.name)}"></div>
+        <div><label>Diet</label><select id="r-diet"><option ${data.diet==='omnivorous'?'selected':''}>omnivorous</option><option ${data.diet==='vegetarian'?'selected':''}>vegetarian</option></select></div>
+        <div><label>Servings</label><input type="number" id="r-serv" value="${data.servings}" min="1" step="0.5"></div>
+      </div>
+      <div style="margin-top:10px"><label>Description</label><input type="text" id="r-desc" value="${esc(data.description)}"></div>
+      <div class="row" style="margin-top:10px">
+        <div><label>Meals (multi)</label>
+          ${['breakfast','lunch','dinner','snack'].map(m => `<label style="display:inline-flex;align-items:center;margin-right:10px"><input type="checkbox" class="r-meal" value="${m}" ${data.meals.includes(m)?'checked':''} style="width:auto"> ${m}</label>`).join('')}
+        </div>
+        <div><label>Flags</label>
+          <label style="display:inline-flex;align-items:center;margin-right:10px"><input type="checkbox" id="r-sub" ${data.is_subrecipe?'checked':''} style="width:auto"> sub-recipe (component)</label>
+          <label style="display:inline-flex;align-items:center"><input type="checkbox" id="r-tmpl" ${data.is_meal_template?'checked':''} style="width:auto"> meal template (builder)</label>
+        </div>
+      </div>
+      <div class="section"><h3>Items ${data.is_meal_template ? '<span class="muted">(select slot name for each component, e.g. "filling")</span>' : ''}</h3>
+        ${data.items.map((it, idx) => `
+          <div class="item-line">
+            <span class="item-name">${it.kind === 'recipe' ? '🥣' : '🥕'} ${esc(it.name)}
+              <input type="text" class="slot-input" data-idx="${idx}" placeholder="slot (optional)" value="${esc(it.slot || '')}" style="width:110px;padding:2px 6px;font-size:12px;display:inline-block">
+              <input type="text" class="qty-input" data-idx="${idx}" placeholder="qty (optional)" value="${esc(it.quantity || '')}" style="width:110px;padding:2px 6px;font-size:12px;display:inline-block">
+            </span>
+            <button class="btn danger small" data-rm="${idx}">✕</button>
+          </div>`).join('') || '<p class="muted">No items yet.</p>'}
+        <div class="row" style="margin-top:8px">
+          <div><label>Add ingredient</label>
+            <select id="add-ing"><option value="">— pick —</option>${ingredients.filter(i => !data.items.some(x => x.kind==='ingredient' && x.ingredient_id===i.id)).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</select></div>
+          <div><label>Add sub-recipe</label>
+            <select id="add-sub"><option value="">— pick —</option>${recipes.filter(x => x.id !== (recipe && recipe.id) && !data.items.some(t => t.kind==='recipe' && t.subrecipe_id===x.id)).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>
+          <div style="flex:0"><button class="btn" id="add-btn">Add</button></div>
+        </div>
+      </div>
+      <div class="section"><label>Instructions</label><textarea id="r-instr" rows="4">${esc(data.instructions)}</textarea></div>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn" id="save">Save Recipe</button>
+      </div>
+    </div>`;
+    $('#close').onclick = () => backdrop.remove();
+    backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+    document.querySelectorAll('.slot-input').forEach(el => el.onchange = () => data.items[+el.dataset.idx].slot = el.value);
+    document.querySelectorAll('.qty-input').forEach(el => el.onchange = () => data.items[+el.dataset.idx].quantity = el.value);
+    document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { data.items.splice(+b.dataset.rm, 1); render(); });
+    $('#add-btn').onclick = () => {
+      const ingId = +$('#add-ing').value, subId = +$('#add-sub').value;
+      if (ingId) { data.items.push({kind: 'ingredient', ingredient_id: ingId, name: ingredients.find(i=>i.id===ingId).name, quantity: '', slot: '', optional: false}); render(); }
+      else if (subId) { data.items.push({kind: 'recipe', subrecipe_id: subId, name: recipes.find(r=>r.id===subId).name, quantity: '', slot: '', optional: false}); render(); }
+    };
+    $('#save').onclick = async () => {
+      const payload = {
+        name: $('#r-name').value, diet: $('#r-diet').value, servings: +$('#r-serv').value || 2,
+        description: $('#r-desc').value, instructions: $('#r-instr').value,
+        is_subrecipe: $('#r-sub').checked, is_meal_template: $('#r-tmpl').checked,
+        base_recipe_id: data.base_recipe_id, variant_label: data.variant_label || '',
+        meals: [...document.querySelectorAll('.r-meal:checked')].map(c => c.value),
+        items: data.items.map(i => ({kind: i.kind, ingredient_id: i.ingredient_id, subrecipe_id: i.subrecipe_id, slot: i.slot || '', quantity: i.quantity || '', optional: !!i.optional})),
+      };
+      try {
+        const saved = recipe && recipe.id
+          ? await api('/recipes/' + recipe.id, {method: 'PUT', body: payload})
+          : await api('/recipes', {method: 'POST', body: payload});
+        backdrop.remove();
+        renderRecipeDetail(saved.id);
+      } catch (e) { alert('Save failed: ' + e.message); }
+    };
+  }
+  render();
+}
+
+// ============ PLAN MODAL ============
+function openPlanModal(recipeId) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `<div class="modal">
+    <h2>Add to Meal Planner <button class="btn ghost small" id="close">✕</button></h2>
+    <label>Day</label><input type="date" id="p-day" value="${new Date().toISOString().slice(0,10)}">
+    <label style="margin-top:8px">Meal</label>
+    <select id="p-meal">${['breakfast','lunch','dinner','snack'].map(m => `<option>${m}</option>`).join('')}</select>
+    <div style="margin-top:14px"><button class="btn" id="p-ok">Add to planner</button></div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  $('#close').onclick = () => backdrop.remove();
+  backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+  $('#p-ok').onclick = async () => {
+    try {
+      await api('/planner', {method: 'POST', body: {day: $('#p-day').value, meal: $('#p-meal').value, recipe_id: recipeId}});
+      backdrop.remove();
+      setView('planner');
+    } catch (e) { alert(e.message); }
+  };
+}
+
+// ============ INGREDIENTS VIEW ============
+async function renderIngredients() {
+  const ingredients = await api('/ingredients');
+  app.innerHTML = `
+    <div class="card">
+      <h2>Add Ingredient</h2>
+      <div class="row">
+        <div><label>Name</label><input type="text" id="i-name" placeholder="e.g. tomato sauce"></div>
+        <div><label>Category</label><input type="text" id="i-cat" placeholder="e.g. pantry"></div>
+        <div style="flex:0"><button class="btn" id="i-add">Add</button></div>
+      </div>
+    </div>
+    <div class="card"><h2>All Ingredients <span class="muted">(check = already in pantry)</span></h2>
+      <table><thead><tr><th>Name</th><th>Category</th><th>Pantry</th><th>Brands</th><th></th></tr></thead><tbody>
+      ${ingredients.map(i => `
+        <tr>
+          <td>${esc(i.name)}</td>
+          <td class="muted">${esc(i.category)}</td>
+          <td><input type="checkbox" class="pantry-cb" data-id="${i.id}" ${i.in_pantry?'checked':''}></td>
+          <td>${i.brand_count} <button class="btn ghost small brand-btn" data-id="${i.id}" data-name="${esc(i.name)}">Manage</button></td>
+          <td><button class="btn danger small ing-del" data-id="${i.id}">✕</button></td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+  $('#i-add').onclick = async () => {
+    try { await api('/ingredients', {method: 'POST', body: {name: $('#i-name').value, category: $('#i-cat').value}}); renderIngredients(); }
+    catch (e) { alert(e.message); }
+  };
+  document.querySelectorAll('.pantry-cb').forEach(cb => cb.onchange = async () => {
+    await api('/pantry/' + cb.dataset.id, {method: cb.checked ? 'POST' : 'DELETE'});
+  });
+  document.querySelectorAll('.ing-del').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete ingredient (removes from recipes)?')) return;
+    await api('/ingredients/' + b.dataset.id, {method: 'DELETE'}); renderIngredients();
+  });
+  document.querySelectorAll('.brand-btn').forEach(b => b.onclick = () => openBrandModal(+b.dataset.id, b.dataset.name));
+}
+
+async function openBrandModal(ingId, ingName) {
+  const [brands, usedIn] = await Promise.all([
+    api(`/ingredients/${ingId}/brands`),
+    api('/recipes?ingredient=' + encodeURIComponent(ingName)),
+  ]);
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  function render() {
+    backdrop.innerHTML = `<div class="modal">
+      <h2>Brands for “${esc(ingName)}” <button class="btn ghost small" id="close">✕</button></h2>
+      ${brands.map(b => `<div class="item-line"><span class="item-name">🏷 ${esc(b.name)} <span class="muted">${esc(b.note)}</span></span><button class="btn danger small" data-del="${b.id}">✕</button></div>`).join('') || '<p class="muted">No brands yet.</p>'}
+      <div class="row section">
+        <div><label>Brand name</label><input type="text" id="b-name"></div>
+        <div><label>Note (why it works here)</label><input type="text" id="b-note"></div>
+        <div style="flex:0"><button class="btn" id="b-add">Add</button></div>
+      </div>
+      ${usedIn.length ? `<div class="section"><h3>Used in</h3><p class="muted">${usedIn.map(r => esc(r.name)).join(', ')}</p></div>` : ''}
+    </div>`;
+    $('#close').onclick = () => backdrop.remove();
+    backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      await api('/brands/' + b.dataset.del, {method: 'DELETE'});
+      const idx = brands.findIndex(x => x.id === +b.dataset.del); brands.splice(idx, 1); render();
+    });
+    $('#b-add').onclick = async () => {
+      try { const nb = await api(`/ingredients/${ingId}/brands`, {method: 'POST', body: {name: $('#b-name').value, note: $('#b-note').value}}); brands.push(nb); render(); }
+      catch (e) { alert(e.message); }
+    };
+  }
+  document.body.appendChild(backdrop);
+  render();
+}
+
+// ============ PLANNER VIEW ============
+async function renderPlanner() {
+  const [planner, recipes] = await Promise.all([api('/planner'), api('/recipes')]);
+  app.innerHTML = `
+    <div class="card"><h2>This Week's Plan</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div><label>Start date</label><input type="date" id="pl-start"></div>
+        <div style="flex:0"><button class="btn" id="pl-refresh">Refresh</button></div>
+      </div>
+      <p class="muted">Click a + slot to add a recipe. Click a recipe to remove it.</p>
+      <div class="planner-grid">
+        ${planner.map(day => `
+          <div class="card day-card">
+            <h3>${new Date(day.day + 'T00:00').toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})}</h3>
+            ${['breakfast','lunch','dinner','snack'].map(m => `
+              <div class="slot">
+                <div class="slot-label">${m}</div>
+                ${day.meals[m].map(p => `<span class="planned">${esc(p.name)} <span class="x" data-pid="${p.id}">✕</span></span>`).join('')}
+                <span class="empty-slot" data-day="${day.day}" data-meal="${m}">+</span>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Shop for whole plan</h3>
+      <button class="btn" id="plan-shop">Generate Shopping List for this week</button>
+    </div>`;
+  $('#pl-refresh').onclick = () => renderPlanner();
+  $('#plan-shop').onclick = () => {
+    const ids = planner.flatMap(d => ['breakfast','lunch','dinner','snack'].flatMap(m => d.meals[m].map(x => x.recipe_id)));
+    if (!ids.length) { alert('Nothing planned yet.'); return; }
+    openShoppingPreview([...new Set(ids)]);
+  };
+  document.querySelectorAll('[data-pid]').forEach(x => x.onclick = async () => {
+    await api('/planner/' + x.dataset.pid, {method: 'DELETE'}); renderPlanner();
+  });
+  document.querySelectorAll('.empty-slot').forEach(s => s.onclick = () => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `<div class="modal">
+      <h2>Add recipe to ${s.dataset.meal} on ${s.dataset.day} <button class="btn ghost small" id="close">✕</button></h2>
+      <select id="pick">${recipes.filter(r => !r.meals.length || r.meals.includes(s.dataset.meal)).map(r => `<option value="${r.id}">${esc(r.name)} (${r.diet})</option>`).join('')}</select>
+      <div style="margin-top:12px"><button class="btn" id="ok">Add</button></div>
+    </div>`;
+    document.body.appendChild(backdrop);
+    $('#close').onclick = () => backdrop.remove();
+    backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+    $('#ok').onclick = async () => {
+      await api('/planner', {method: 'POST', body: {day: s.dataset.day, meal: s.dataset.meal, recipe_id: +$('#pick').value}});
+      backdrop.remove(); renderPlanner();
+    };
+  });
+}
+
+// ============ SHOPPING VIEW ============
+async function openShoppingPreview(recipeIds) {
+  const preview = await api('/shopping/preview', {method: 'POST', body: {recipe_ids: recipeIds, pantry_ingredient_ids: []}});
+  const items = preview.items;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  function render() {
+    backdrop.innerHTML = `<div class="modal">
+      <h2>Shopping Preview <button class="btn ghost small" id="close">✕</button></h2>
+      <p class="muted">Check what you already have — unchecked items go to the shopping list.</p>
+      ${items.map((it, idx) => `
+        <div class="checkbox-line">
+          <input type="checkbox" data-idx="${idx}" ${it.have ? 'checked' : ''} ${it.have ? 'style="accent-color:var(--green)"' : ''}>
+          <span>${esc(it.name)} ${it.optional ? '<span class="tag meal">optional</span>' : ''} <span class="muted">${esc(it.quantity)}</span></span>
+          ${it.have ? '<span class="muted" style="margin-left:auto">in pantry</span>' : ''}
+        </div>`).join('') || '<p class="muted">Nothing needed.</p>'}
+      <div style="margin-top:14px"><button class="btn" id="finalize">Generate Shopping List</button></div>
+    </div>`;
+    $('#close').onclick = () => backdrop.remove();
+    backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+    document.querySelectorAll('[data-idx]').forEach(cb => cb.onchange = () => items[+cb.dataset.idx].have = cb.checked);
+    $('#finalize').onclick = async () => {
+      await api('/shopping/finalize', {method: 'POST', body: {items}});
+      backdrop.remove(); setView('shopping');
+    };
+  }
+  document.body.appendChild(backdrop);
+  render();
+}
+
+async function renderShopping() {
+  const {items} = await api('/shopping/list');
+  app.innerHTML = `
+    <div class="card"><h2>Shopping List</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div><label>Quick add recipe to list</label>
+          <select id="s-recipe"><option value="">— pick recipe —</option>
+            ${(await api('/recipes')).map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}
+          </select></div>
+        <div style="flex:0"><button class="btn" id="s-add">Preview & Add</button></div>
+        <div style="flex:0; align-self:end"><button class="btn ghost" id="s-clear">Clear List</button></div>
+      </div>
+      ${items.map(it => `
+        <div class="item-line">
+          <input type="checkbox" ${it.bought ? 'checked' : ''} data-buy="${it.id}" style="width:auto">
+          <span class="item-name" style="${it.bought ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(it.name)}</span>
+          <span class="muted">${esc(it.quantity)}</span>
+          <button class="btn danger small" data-rm="${it.id}">✕</button>
+        </div>`).join('') || '<p class="muted">Shopping list is empty. Add recipes above, or plan meals and generate from the planner.</p>'}
+    </div>`;
+  $('#s-add').onclick = () => { const v = +$('#s-recipe').value; if (v) openShoppingPreview([v]); };
+  $('#s-clear').onclick = async () => { if (confirm('Clear shopping list?')) { await api('/shopping', {method: 'DELETE'}); renderShopping(); } };
+  document.querySelectorAll('[data-buy]').forEach(cb => cb.onchange = async () => {
+    await api('/shopping/toggle/' + cb.dataset.buy, {method: 'POST'}); renderShopping();
+  });
+  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
+    await api('/shopping/' + b.dataset.rm, {method: 'DELETE'}); renderShopping();
+  });
+}
+
+function render() {
+  const views = {recipes: renderRecipes, ingredients: renderIngredients, planner: renderPlanner, shopping: renderShopping};
+  (views[state.view] || renderRecipes)({}).catch(e => { app.innerHTML = `<div class="card">Error: ${esc(e.message)}</div>`; });
+}
+render();
+</script>
+</body>
+</html>
